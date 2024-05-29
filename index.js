@@ -46,6 +46,18 @@ async function run() {
       });
     };
 
+    // veryfy admin after veryfy token
+    const veryfyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
     // jwt releted api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
@@ -60,6 +72,20 @@ async function run() {
       const result = await menuCollection.find().toArray();
       res.send(result);
     });
+
+    app.post("/menu", veryfyToken, veryfyAdmin, async (req, res) => {
+      const item = req.body;
+      const result = await menuCollection.insertOne(item);
+      res.send(result);
+    });
+
+    app.delete("/menu/:id", veryfyToken, veryfyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: id };
+      const result = await menuCollection.deleteOne(query);
+      res.send(result);
+    });
+
     app.get("/reviews", async (req, res) => {
       const result = await reviewsCollection.find().toArray();
       res.send(result);
@@ -86,47 +112,32 @@ async function run() {
       res.send(result);
     });
 
-
-
-
-// veryfy admin after veryfy token 
-const veryfyAdmin = async (req , res ) =>{
-  const email = req.decoded.email ;
-  const query = {email : email};
-  const user = await userCollection.findOne(query);
-  const isAdmin = user?.role === 'admin' ;
-  if (!isAdmin) {
-    return res.status(403).send({message : 'forbidden access'})
-
-  }
-  next()
-}
-
-
-
-
     // users api
 
-    app.get("/users", veryfyToken,veryfyAdmin, async (req, res) => {
+    app.get("/users", veryfyToken, veryfyAdmin, async (req, res) => {
       console.log(req.headers);
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/users/admin/:email", veryfyToken,veryfyAdmin, async (req, res) => {
-      const email = req.params.email;
-      if (email !== req.decoded.email) {
-
-        return res.status(403).send({message : 'forbidden access'})
+    app.get(
+      "/users/admin/:email",
+      veryfyToken,
+      veryfyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        if (email !== req.decoded.email) {
+          return res.status(403).send({ message: "forbidden access" });
+        }
+        const query = { email: email };
+        const user = await userCollection.findOne(query);
+        let admin = false;
+        if (user) {
+          admin = user.role === "admin";
+        }
+        res.send({ admin });
       }
-      const query = {email : email};
-      const user = await userCollection.findOne(query)
-      let admin = false ;
-      if (user) {
-        admin = user.role === 'admin' ;
-      } 
-      res.send({admin}); 
-    });
+    );
 
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -143,19 +154,24 @@ const veryfyAdmin = async (req , res ) =>{
       res.send(result);
     });
 
-    app.patch("/users/admin/:id",veryfyAdmin,veryfyToken, async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const updatedDoc = {
-        $set: {
-          role: "admin",
-        },
-      };
-      const result = await userCollection.updateOne(filter, updatedDoc);
-      res.send(result);
-    });
+    app.patch(
+      "/users/admin/:id",
+      veryfyToken,
+      veryfyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            role: "admin",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      }
+    );
 
-    app.delete("users/:id", async (req, res) => {
+    app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await userCollection.deleteOne(query);
