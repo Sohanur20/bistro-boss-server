@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const stripe = require("stripe")('sk_test_51PMZK1LoNc3DJxn1uZUIH55KncduCpPNoE3Q2mQm7VavJhdakgggGOhnjIqXBYYm3SsFbEjA4O75pg2LIm0ZFPKw00c2kC2WbG');
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
@@ -33,7 +33,7 @@ async function run() {
 
     // midlewere
     const veryfyToken = (req, res, next) => {
-      console.log("inside veryfy token ", req.headers.authorization);
+      // console.log("inside veryfy token ", req.headers.authorization);
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "unathorized accesss" });
       }
@@ -206,6 +206,10 @@ async function run() {
     app.post("/create-payment-intent", async (req, res) => {
       const { price } = req.body;
       const amount = parseInt(price * 100);
+      console.log(price);
+      console.log(amount, "inside the intent");
+
+
       const paymentIntent = await stripe.paymentIntents.create({
         amount : amount ,
         currency: "usd",
